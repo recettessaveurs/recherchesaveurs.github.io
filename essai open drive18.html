@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rechercher et ouvrir un fichier Google Drive</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #88853e;
+            padding: 20px;
+        }
+        h1 {
+            color: #000000;
+            text-align: center;
+        }
+        label {
+            font-size: 1.1em;
+            color: #000000;
+            margin-bottom: 10px;
+            display: block;
+            text-align: center;
+        }
+        input[type="text"], select {
+            width: 50%; /* Réduction de la largeur */
+            padding: 8px;
+            margin: 10px auto;
+            border: 1px solid #ccdb34;
+            border-radius: 5px;
+            font-size: 1em;
+            display: block;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .autocomplete-items {
+            border: 1px solid #c7c7bd;
+            border-bottom: none;
+            border-top: none;
+            z-index: 99;
+            position: absolute;
+            background-color: white;
+            max-height: 150px;
+            overflow-y: auto;
+            width: 50%;
+        }
+        .autocomplete-items div {
+            padding: 10px;
+            cursor: pointer;
+            background-color: #fff; 
+            border-bottom: 1px solid #c7c7bd; 
+        }
+        .autocomplete-items div:hover {
+            background-color: #c7c7bd; 
+        }
+        .file-list {
+            margin-top: 20px;
+            list-style: none;
+            padding: 0;
+            text-align: center;
+        }
+        .file-list li {
+            padding: 10px;
+            border: 1px solid #c7c7bd;
+            margin-bottom: 5px;
+            cursor: pointer;
+            background-color: #ecf0f1;
+            display: inline-block;
+            width: 50%;
+            transition: background-color 0.3s ease;
+        }
+        .file-list li:hover {
+            background-color: #c7c7bd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Recettes Saveurs</h1>
+
+    <!-- Sélection du type de plat -->
+    <label for="typePlat">Type de plat :</label>
+    <select id="typePlat">
+        <option value="all">Tous les types</option>
+        <option value="Entrées">Entrées</option>
+<option value="Soupes">Soupes</option>
+<option value="Salades">Salades</option>
+<option value="Tartes & cakes salés">Tartes & cakes salés</option>
+<option value="Œufs">Œufs</option>
+<option value="Sandwichs"'>Sandwichs</option>
+<option value="Légumes">Légumes</option>
+<option value="Pâtes, riz, céréales">Pâtes, riz, céréales</option>
+<option value="Pains">Pains</option>
+<option value="Plats végétariens">Plats végétariens</option>
+<option value="Volailles">Volailles</option>
+<option value="Agneau">Agneau</option>
+<option value="Porc">Porc</option>
+<option value="Bœuf">Bœuf</option>
+<option value="Veau">Veau</option>
+<option value="Poissons">Poissons</option>
+<option value="Coquillages & crustacés">Coquillages & crustacés</option>
+<option value="Petits Déjeuners & ^Goûters">Petits Déjeuners & ^Goûters</option>
+<option value="Désserts">Desserts</option>
+
+    </select>
+
+    <!-- Champ de recherche pour taper la demande -->
+    <label for="fileInput">Recherchez :</label>
+    <input type="text" id="fileInput" placeholder="Rechercher un fichier...">
+
+    <!-- Liste de fichiers affichée -->
+    <ul id="fileList" class="file-list"></ul>
+
+    <script>
+        // Liste de fichiers Google Drive simulée (avec ID, nom de fichier et type de plat)
+        const files = [
+          {  id: '1iCakaXwRqG9eQlNQmPTKRZXeooiScnYl' , name:  'Aïoli de lotte ',type:'Poissons'},
+{  id: '1GsZ1RXAMjOmaGtAA24AFMUiWOWA-n0ad' , name:  'Ananas givré ',type:'Déssert'},
+{  id: '1ktOn5I7qcorzDXW-GKnuzGRMuaFJxT_o' , name:  'Aubergines braisées au porc haché ',type:'Porc'},
+{  id: '1stLDHSpsiP5CpPXQ2XXltr7-2n5f0qpR' , name:  'Aubergines confites au paprika fumé ',type:'Légumes'},
+{  id: '1K8YC8gdjec8aEQ8Ho3DkBXbGVlnL9JYW' , name:  'Babka à la crème de marrons, poire et noisettes ',type:'Déssert'},
+{  id: '1QUa0bdEwC1zZ5RXvjvJbLLnQqCovO-fQ' , name:  'Bagels ',type:'Pains'},
+{  id: '1S8-kPAK7QQU3XSlrLDtdSxGqMwru6VIj' , name:  'Beignets de calamar aux corn flakes et au lait ribot ',type:'Coquillages & crustacés'},
+{  id: '1lbzSk14agsJ8FGhb922gLcEX5crMXLBU' , name:  'Beignets de Ponza ',type:'Déssert'},
+{  id: '1dABsiSvF6dAqdL6d0Omym5tJFe92bZVI' , name:  'Betteraves et carottes confites, polenta et pesto de sauge ',type:'Légumes'},
+{  id: '1ABx7V_O6fdpOSiKfKV8uruynaUPmEjM6' , name:  'Biscuits au gingembre et au miel ',type:'Déssert'},
+{  id: '1nPosKgtwgvrf3B8Q7huUrY_LKeofnboi' , name:  'Biscuits fourrés au fromage ',type:'Entrées'},
+{  id: '1ABx7V_O6fdpOSiKfKV8uruynaUPmEjM6' , name:  'Biscuits linzer à la confiture de fraises ',type:'Déssert'},
+{  id: '1VpZWGTFWdw_xU9GSP4ExZEC4P8sOULjQ' , name:  'Biscuits sablés de Ligurie ',type:'Déssert'},
+{  id: '1j8o3s3vmJrbFQHf1JOScUk3UA8j9r65n' , name:  'Blanquette auxtrois poissons ',type:'Poissons'},
+{  id: '1nPosKgtwgvrf3B8Q7huUrY_LKeofnboi' , name:  'Blinis de sarrasin au haddock et radis ',type:'Entrées'},
+{  id: '1PgCFZmRTRcAL0NrSfyFeL2OwLFzyryDW' , name:  'Bœuf au saté ',type:'Bœuf'},
+{  id: '1ujfNxs3TfD7wqh4E935LtrPyG7epFdM0' , name:  'Bouillon aux pâtes orzo et tagliatelles de carottes ',type:'Soupes'},
+{  id: '1yegqcP-UaSF03YGeP0TuQHiaA8aEOqQP' , name:  'Bouillon de légumes au gingembre ',type:'Soupes'},
+{  id: '1VenIbGbdCYfqw7NYWpXzT89jNxgA3gVt' , name:  'Bouillon de poulet au yuzu et nouilles soba ',type:'Soupes'},
+{  id: '1XPwiKrTnSb9wlvmTI9CydPNBEn9rm0_W' , name:  'Bouillon de poulet, haddock, petites pommes de terre et choux de Bruxelles ',type:'Soupes'},
+{  id: '1ujfNxs3TfD7wqh4E935LtrPyG7epFdM0' , name:  'Bouillon thaï ',type:'Soupes'},
+{  id: '1PgCFZmRTRcAL0NrSfyFeL2OwLFzyryDW' , name:  'Boulettes de bœuf à la sauce tomate ',type:'Bœuf'},
+{  id: '1GwkEx5tY8TXTg0jpzHdKLX6HYo8rfPIq' , name:  'Bowl misozuke ',type:'Salades'},
+{  id: '1tYDarJDg9VYK0ECZolXV6i7vJJrL_nal' , name:  'Bretzels ',type:'Pains'},
+{  id: '1BqwWKUXCWH6utmocvMSQ20roLpbtHx2-' , name:  'Brioche de Vérone ',type:'Petits Déjeuners & Goûters'},
+{  id: '1DSXC0FiPztH-2bYLel_FV2lUucTL43_P' , name:  'Brioche mousseline ',type:'Petits Déjeuners & Goûters'},
+{  id: '1pWEVLY-SlyW-JMSuUA0WNVXxlMCqpQ4p' , name:  'Brioche perdue aux pommes et au caramel ',type:'Déssert'},
+{  id: '1PYyk5_c8Fbjhvuy6EGct2iQVEfpYd6f5' , name:  'Brioches au citron ',type:'Petits Déjeuners & Goûters'},
+{  id: '1HXC9zaYBYiyFYtD1ECmle27G9Yg0ZRad' , name:  'Brochettes d’agneau marinées au zaatar ',type:'Agneau'},
+{  id: '10ORG6uq0Y1avqkBjZCKkGJ-frUQk8kBF' , name:  'Brochettes de foie de veau, bacon au beurre d’herbes ',type:'Veau'},
+{  id: '10ORG6uq0Y1avqkBjZCKkGJ-frUQk8kBF' , name:  'Brochettes de veau mariné au café et pruneaux au lard ',type:'Veau'},
+{  id: '1j8o3s3vmJrbFQHf1JOScUk3UA8j9r65n' , name:  'Cabillaud en bouillon asiatique ',type:'Poissons'},
+{  id: '1jKymXg265fZHGpNh5igkxtPmuIQz-5FZ' , name:  'Cabillaud et chou blanc au curry ',type:'Poissons'},
+{  id: '1P1ErsHJzGuNkhyD0LFxnTDUZMF6XKKO1' , name:  'Cailles farcies au foie gras, poêlée de marrons aux figues',type:'Volailles'},
+{  id: '1KknPKryTC9ErFsUlLGFPWgKzCWB_zNHK' , name:  'Cake à la courge, noisettes, lard et gorgonzola ',type:'Tartes & cakes salés'},
+{  id: '1NiYllrxGr0C2sInLzWAhfmsNx7s-nT3Y' , name:  'Cake au thon, poivron et citron confit ',type:'Tartes & cakes salés'},
+{  id: '1GgNsMoJwLfiqbt2-W327nxukgu7wz9SU' , name:  'Cake aux petits pois, thon et café ',type:'Tartes & cakes salés'},
+{  id: '1E5J-z3x_ow_1dVWRvgOtXBJTIzGeslQ4' , name:  'Carpaccio de poisson et légumes croquants ',type:'Poissons'},
+{  id: '18g9V-OY4DBRTFtgbVMadEJ-JLvhgnC1X' , name:  'Cassolettes de cabillaud à la crème et aux œufs de truite ',type:'Poissons'},
+{  id: '1wRdpq7FXBWVom7_XdbeM9-vp34qB1S8K' , name:  'Céleri-rave rôti aux épices, taboulé de boulgour ',type:'Légumes'},
+{  id: '1j8o3s3vmJrbFQHf1JOScUk3UA8j9r65n' , name:  'Ceviche de daurade et tartare d’algues ',type:'Poissons'},
+{  id: '18g9V-OY4DBRTFtgbVMadEJ-JLvhgnC1X' , name:  'Ceviche de lotte, avocat et fruit de la Passion ',type:'Poissons'},
+{  id: '1ARFcym-Yh7p9-171zUWeh5kwOlasG2Iv' , name:  'Ceviche de sar ',type:'Salades'},
+{  id: '1QbDh6tdnPNoqbKIghSlF3RX7ehWxXeVp' , name:  'Chakchouka ',type:'Œufs'},
+{  id: '1MFQTOT0Vl3bfh5Re7yJuKMrKQ-BGm_2U' , name:  'Chapon à la marmelade, farce au pain d’épice ',type:'Volailles'},
+{  id: '13DsgV3XjeJV_aA9C4SEiFSSe1Po76Eyl' , name:  'Chaussons turcs épinard-feta ',type:'Tartes & cakes salés'},
+{  id: '1PgCFZmRTRcAL0NrSfyFeL2OwLFzyryDW' , name:  'Chili con carne à la sauce chipotle ',type:'Bœuf'},
+{  id: '1eiFPzlsNhALDwQZKH4AQ37IjYFACujff' , name:  'Chips de parmesan ',type:'Entrées'},
+{  id: '18g9V-OY4DBRTFtgbVMadEJ-JLvhgnC1X' , name:  'Chirashi de maigre, sauce soja aux fruits de la Passion ',type:'Poissons'},
+{  id: '1n_WF437Azv7BWrQpt0phtaF-QtSUxjxZ' , name:  'Chocolat liégeois à la cannelle ',type:'Petits Déjeuners & Goûters'},
+{  id: '1R9Uh4E60JtIU16yXM_5g2w6jPKuTjb0P' , name:  'Chou farci, riz et fruits secs ',type:'Plats végétariens'},
+{  id: '1EC_VBX5j69YLMvKMSRQWGMg3QPMUEHUb' , name:  'Chou-fleur korma aux noix de cajou ',type:'Légumes'},
+{  id: '122QZMSWukQFitmotR9X281TlSqvf2YM9' , name:  'Chou-fleur Wellington ',type:'Légumes'},
+{  id: '1l9eScDde3Haw0OfiFdnrHVPYjO-uoSra' , name:  'Choux à la crème de coco fouettée, citron et aneth ',type:'Entrées'},
+{  id: '1BxM8dvuMq4F3SxB1odUWu5-AWEH680qk' , name:  'Club-sandwich au poulet et coleslaw ',type:'Sandwichs'},
+{  id: '1BxM8dvuMq4F3SxB1odUWu5-AWEH680qk' , name:  'Club-sandwich focaccia, tomate et scamorza ',type:'Sandwichs'},
+{  id: '1lRb0sPBpga-RSFR8tKcKYs-lDrcD2FuP' , name:  'Club-sandwich tout vert ',type:'Sandwichs'},
+{  id: '16beHu6dur5cA9RpVOSJsURiLVi-Q60ta' , name:  'Cocotte d’artichauts et de haricots coco au haddock ',type:'Poissons'},
+{  id: '1P1ErsHJzGuNkhyD0LFxnTDUZMF6XKKO1' , name:  'Cocotte de faisan au chou et au lard ',type:'Volailles'},
+{  id: '1F7AyO_thJtoeeH7Pm2H9YupBYLJqV4hu' , name:  'Consommé et ravioles de langoustines ',type:'Soupes'},
+{  id: '1Es0Vkq5d_UcZCF4BTsVrGTIEhI68duaS' , name:  'Cookies au sucre de canne, aux pépites de chocolat et aux noix ',type:'Déssert'},
+{  id: '1Q94wR1FF-lBy9JVyG81b1IIxfOaFCD0b' , name:  'Cookies aux flocons d’avoine, chocolat blanc et raisins secs ',type:'Déssert'},
+{  id: '1oCIARw8kPlU27chL8SOHvLGiuCNH1UlZ' , name:  'Coquilles Saint-Jacques gratinées aux noisettes ',type:'Coquillages & crustacés'},
+{  id: '1cMAwzJZiTjrgfhBXuKH_6uh7eBMDdYUY' , name:  'Côte de bœuf marinée à la bière et aux épices ',type:'Bœuf'},
+{  id: '10ORG6uq0Y1avqkBjZCKkGJ-frUQk8kBF' , name:  'Côte de veau, panais, carottes au beurre vanillé ',type:'Veau'},
+{  id: '1HXC9zaYBYiyFYtD1ECmle27G9Yg0ZRad' , name:  'Côtes d’agneau en croûte d’herbes, purée de fèves ',type:'Agneau'},
+{  id: '1ktOn5I7qcorzDXW-GKnuzGRMuaFJxT_o' , name:  'Côtes de porc au miel et curcuma, tomates grillées aux herbes ',type:'Porc'},
+{  id: '1IFQ5HzhYOlOxUyxfzbeu9Lrvey41NSJM' , name:  'Côtes de porc grillées, pommes grenaille écrasées et confiture de poivrons ',type:'Porc'},
+{  id: '1Q94wR1FF-lBy9JVyG81b1IIxfOaFCD0b' , name:  'Coulis de mangue à la vanille ',type:'Déssert'},
+{  id: '1PAVrc-X3KCNBI7JDvpZ6PNql9UXBeP_X' , name:  'Courgettes farcies aux aubergines, coulis de tomates à la citronnelle ',type:'Légumes'},
+{  id: '1R9Uh4E60JtIU16yXM_5g2w6jPKuTjb0P' , name:  'Couscous de fenouil au ras el-hanout ',type:'Plats végétariens'},
+{  id: '1oCIARw8kPlU27chL8SOHvLGiuCNH1UlZ' , name:  'Couteaux bronzés à l’encre de seiche ',type:'Coquillages & crustacés'},
+{  id: '14UqkO_eEtxG4vwqcmaCKV-JvGmkhC-sr' , name:  'Crevettes à l’ail et gombos rôtis, risotto d’épeautre au persil',type:'Coquillages & crustacés'},
+{  id: '1E5J-z3x_ow_1dVWRvgOtXBJTIzGeslQ4' , name:  'Croquettes de morue et de légumes printaniers ',type:'Poissons'},
+{  id: '1BxM8dvuMq4F3SxB1odUWu5-AWEH680qk' , name:  'Crostini aux figues, courgettes, ricotta et jambon cru ',type:'Sandwichs'},
+{  id: '1dAQFyfzAI9wuQkxbuRCcYKkD4d33eMT-' , name:  'Croustilles de morteau ',type:'Entrées'},
+{  id: '1_wTY_5soN4JufNTpBeq-xNnQMPjd8bgw' , name:  'Crumble de panais, carottes et marrons ',type:'Légumes'},
+{  id: '1tYp0gJr_FSdkUNfPTGvJ_4ud0wTnsmzP' , name:  'Crumpets au sirop d’érable, bacon et chou kale ',type:'Petits Déjeuners & Goûters'},
+{  id: '1P1ErsHJzGuNkhyD0LFxnTDUZMF6XKKO1' , name:  'Cuisse de dinde marinée à la harissa et pois chiches grillés ',type:'Volailles'},
+{  id: '1Hnzh-CoZo5PkdfOcG0WRTk-o6T0BCgSB' , name:  'Cuisse de dinde rôtie à la texane, pommes de terre au four ',type:'Volailles'},
+{  id: '1MFQTOT0Vl3bfh5Re7yJuKMrKQ-BGm_2U' , name:  'Cuisses de canard confites, gratin de blettes au tahini ',type:'Volailles'},
+{  id: '10-3GYnVDPQbMnqkBJrLmqLpev_CllWC9' , name:  'Cuisses de poulet grillées à la citronnelle et au gingembre, pommes de terre aux herbes ',type:'Volailles'},
+{  id: '1X1_nUAZgwe3t2BmfhZS7nYcv_FoeQABY' , name:  'Curry de courge, lentilles et marrons ',type:'Légumes'},
+{  id: '1stLDHSpsiP5CpPXQ2XXltr7-2n5f0qpR' , name:  'Curry de gombos sautés aux cébettes, sauce au yaourt ',type:'Légumes'},
+{  id: '1cMAwzJZiTjrgfhBXuKH_6uh7eBMDdYUY' , name:  'Curry panang de bœuf ',type:'Bœuf'},
+{  id: '1neVuX25gUniCL98lEwMGZJqnN4LBg0Tm' , name:  'Daurade vapeur à la cantonaise ',type:'Poissons'},
+{  id: '1lRb0sPBpga-RSFR8tKcKYs-lDrcD2FuP' , name:  'Dip de fèves ',type:'Sandwichs'},
+{  id: '1K14lIk1Bvol0KDCq-ZY9FHyKxKo9_Y42' , name:  'Émincé de foie de veau au madère et purée persillée ',type:'Veau'},
+{  id: '1_wTY_5soN4JufNTpBeq-xNnQMPjd8bgw' , name:  'Endives au jambon et au bleu du Queyras ',type:'Légumes'},
+{  id: '1gf3m4u-pdPmB3QW6eFprPB5oPbVjam4F' , name:  'Épaule d’agneau confite aux fruits secs et céleris-raves rôtis ',type:'Agneau'},
+{  id: '1VHugVJCwqERHEl2DEBujxwr1DhthLHOQ' , name:  'Épaule de porc, courgettes sautées à l’ail et aux amandes ',type:'Porc'},
+{  id: '1crsF5AJ8EMGXPhmOC-QxbIPLTodd7o2b' , name:  'Escalope de porc tonkatsu et chou râpé mariné ',type:'Porc'},
+{  id: '15-uRfRy0e4HybfOJIhYFLqpy5LQGlQmU' , name:  'Faisan braisé à la bière et aux endives ',type:'Volailles'},
+{  id: '1Hnzh-CoZo5PkdfOcG0WRTk-o6T0BCgSB' , name:  'Faisan rôti aux pommes et au raisin ',type:'Volailles'},
+{  id: '1CEPgJeqIjSLENRvYKvSzFq3DMe8FRZW8' , name:  'Far aux pruneaux, rhum et lait ribot ',type:'Déssert'},
+{  id: '1vh_aRYzdeJyF6TmZxjPsHUA_yKu1yS8B' , name:  'Feta rôtie aux tomates, poivrons et olives, tartines aillées ',type:'Plats végétariens'},
+{  id: '1QBx1UP1lzL_ZzvfUTy2325RjRU9Wc6lo' , name:  'Feuilletés de saumon aux épinards, crème citronnée',type:'Poissons'},
+{  id: '1ITK_2lIJFZ4D4x8wj0fcj-PbxsxSZRWG' , name:  'Filet de bar confit dans l’huile d’olive et pommes de terre tapées ',type:'Poissons'},
+{  id: '1VHugVJCwqERHEl2DEBujxwr1DhthLHOQ' , name:  'Filet mignon laqué au caramel d’orange, purée de carottes ',type:'Porc'},
+{  id: '1wPy1U8LVY01sfBGR5ECTq2GxKdUlmC9b' , name:  'Filets de bar en bouillon de citronnelle ',type:'Poissons'},
+{  id: '1MFQTOT0Vl3bfh5Re7yJuKMrKQ-BGm_2U' , name:  'Filets de canard farcis au potimarron et à l’orange ',type:'Volailles'},
+{  id: '1BOITd_0TAWzQRug05CnbuhDrKO3rD33G' , name:  'Filets de maquereau grillés aux câpres et riz à la tomate ',type:'Poissons'},
+{  id: '16beHu6dur5cA9RpVOSJsURiLVi-Q60ta' , name:  'Filets de turbot rôtis chorizo et tapenade ',type:'Poissons'},
+{  id: '1Q94wR1FF-lBy9JVyG81b1IIxfOaFCD0b' , name:  'Financiers à la pâte de pistache ',type:'Déssert'},
+{  id: '1Q94wR1FF-lBy9JVyG81b1IIxfOaFCD0b' , name:  'Financiers aux framboises ',type:'Déssert'},
+{  id: '1QBx1UP1lzL_ZzvfUTy2325RjRU9Wc6lo' , name:  'Fish and chips de sole, sauce tartare ',type:'Poissons'},
+{  id: '1nZcmNib_BHD7FtkMe_JEuMl4ZQBjFkH5' , name:  'Flamiche au maroilles et aux oignons ',type:'Plats végétariens'},
+{  id: '1CEPgJeqIjSLENRvYKvSzFq3DMe8FRZW8' , name:  'Flans légers anisés aux fraises ',type:'Déssert'},
+{  id: '1PYyk5_c8Fbjhvuy6EGct2iQVEfpYd6f5' , name:  'Flocons d’avoine à l’amande et aux fruits rouges ',type:'Petits Déjeuners & Goûters'},
+{  id: '1tYDarJDg9VYK0ECZolXV6i7vJJrL_nal' , name:  'Focaccia aux olives et au romarin ',type:'Pains'},
+{  id: '1QD24g9dBlAD1YQwV3sMMMMyl-7a8JpAr' , name:  'Focaccia fine au fromage ',type:'Pains'},
+{  id: '1orSvH5g5oIgsUX9jN0LD0F0IMDr7JV-A' , name:  'Foie de veau aux oignons grelots façon vénitienne ',type:'Veau'},
+{  id: '1orSvH5g5oIgsUX9jN0LD0F0IMDr7JV-A' , name:  'Foie de veau, réduction au thym et pommes sautées ',type:'Veau'},
+{  id: '1ABx7V_O6fdpOSiKfKV8uruynaUPmEjM6' , name:  'Fondants amande-cerise ',type:'Déssert'},
+{  id: '1pQytAIwX6q_Zw1CRmIJ4u85ibVCojV8r' , name:  'Fusilli au pesto de roquette et tomates ',type:'Pâtes, riz, céréales'},
+{  id: '1inficWKzlZlk4T54QAuyW7RAH0PpDh7Q' , name:  'Gâteau à la carotte et aux fruits secs, glaçage au fromage frais ',type:'Déssert'},
+{  id: '1ACHGh0tFX8C9Bf0fHmoKMj2PKWDPeHP0' , name:  'Gâteau aux poires, cidre et pralin ',type:'Déssert'},
+{  id: '14GqccYJcIXpsBu4BDJnF0KaD-Z3srQeA' , name:  'Gâteau brioché à la rhubarbe ',type:'Déssert'},
+{  id: '1GsZ1RXAMjOmaGtAA24AFMUiWOWA-n0ad' , name:  'Gâteau très fondant au chocolat et au sarrasin ',type:'Déssert'},
+{  id: '1n_WF437Azv7BWrQpt0phtaF-QtSUxjxZ' , name:  'Gaufres de Liège au sucre perlé et à la vanille ',type:'Petits Déjeuners & Goûters'},
+{  id: '1R6BoOXYYofVl03NqN9Hw1iRLyuzEGYKT' , name:  'Gnocchis de patates douces, sauce au bleu ',type:'Plats végétariens'},
+{  id: '1lizF8EataVaZhGII4Sn-ldJCn1p92Oxt' , name:  'Gnocchis de pommes de terre au beurre et à la sauge ',type:'Pâtes, riz, céréales'},
+{  id: '1pQytAIwX6q_Zw1CRmIJ4u85ibVCojV8r' , name:  'Gnocchis, petits pois et anguille fumée ',type:'Pâtes, riz, céréales'},
+{  id: '1PYyk5_c8Fbjhvuy6EGct2iQVEfpYd6f5' , name:  'Granola au skyr, compotée de rhubarbe et framboises ',type:'Petits Déjeuners & Goûters'},
+{  id: '1YPb7JPZ4b5eLm7LdOBGhU1xgQf-4OsGZ' , name:  'Granola salé ',type:'Entrées'},
+{  id: '1_wTY_5soN4JufNTpBeq-xNnQMPjd8bgw' , name:  'Gratin de chou-fleur coco et curry ',type:'Légumes'},
+{  id: '1loEvAo3rK5HLCSVPX4MbqCUblHluIOE7' , name:  'Gratin de crozets aux poireaux et reblochon ',type:'Pâtes, riz, céréales'},
+{  id: '1nZcmNib_BHD7FtkMe_JEuMl4ZQBjFkH5' , name:  'Gratin de pâtes à la courge butternut et à la scamorza ',type:'Plats végétariens'},
+{  id: '1loEvAo3rK5HLCSVPX4MbqCUblHluIOE7' , name:  'Gratin de pâtes, courge butternut et à la scamorza ',type:'Pâtes, riz, céréales'},
+{  id: '15-uRfRy0e4HybfOJIhYFLqpy5LQGlQmU' , name:  'Gratin de pommes de terre au confit de canard ',type:'Volailles'},
+{  id: '1vhREKljvXx_GPq3osm-bR_OzD5AavYLi' , name:  'Gratin de potimarron au bleu d’Auvergne ',type:'Légumes'},
+{  id: '1uod8UqekTpZpM216l4Lw8wl5zC9dWOKz' , name:  'Gratin de ravioles à la courgette ',type:'Pâtes, riz, céréales'},
+{  id: '1wPy1U8LVY01sfBGR5ECTq2GxKdUlmC9b' , name:  'Gratin de saumon aux patates douces ',type:'Poissons'},
+{  id: '1wPy1U8LVY01sfBGR5ECTq2GxKdUlmC9b' , name:  'Gratins de patates douces au cabillaud et au gingembre ',type:'Poissons'},
+{  id: '1Hnzh-CoZo5PkdfOcG0WRTk-o6T0BCgSB' , name:  'Gravlax de canard aux kumquats ',type:'Volailles'},
+{  id: '16beHu6dur5cA9RpVOSJsURiLVi-Q60ta' , name:  'Gravlax de saumon à la betterave ',type:'Poissons'},
+{  id: '1hkCZGd9I5pB0gxQwvqBK8VpyqOuU5J64' , name:  'Guacamole de brocoli et crackers de maÏs ',type:'Entrées'},
+{  id: '1ksbyoB1XSZx4bFSiRs63fvOcYuqDbCZ_' , name:  'Haricots de Soissons aux tomates, épinards et feta ',type:'Plats végétariens'},
+{  id: '1nPosKgtwgvrf3B8Q7huUrY_LKeofnboi' , name:  'Houmous rouge ',type:'Entrées'},
+{  id: '1S8-kPAK7QQU3XSlrLDtdSxGqMwru6VIj' , name:  'Huîtres pochées, mousseline de cresson et mangue ',type:'Coquillages & crustacés'},
+{  id: '1oCIARw8kPlU27chL8SOHvLGiuCNH1UlZ' , name:  'Huîtres roties au chorizo ',type:'Coquillages & crustacés'},
+{  id: '1cMAwzJZiTjrgfhBXuKH_6uh7eBMDdYUY' , name:  'Joue de bœuf aux carottes flambées au cognac ',type:'Bœuf'},
+{  id: '1oCIARw8kPlU27chL8SOHvLGiuCNH1UlZ' , name:  'Langoustines à la vanille, écrasée de courge aux algues ',type:'Coquillages & crustacés'},
+{  id: '19Wjn7H36BOUe0Z8agyg6NB04aRV67U08' , name:  'Lasagnes aux morilles et aux petits pois ',type:'Pâtes, riz, céréales'},
+{  id: '1X1_nUAZgwe3t2BmfhZS7nYcv_FoeQABY' , name:  'Légumes rôtis au zaatar et au labneh ',type:'Légumes'},
+{  id: '1X1_nUAZgwe3t2BmfhZS7nYcv_FoeQABY' , name:  'Lentilles vertes façon risotto et légumes d’hiver ',type:'Légumes'},
+{  id: '19Wjn7H36BOUe0Z8agyg6NB04aRV67U08' , name:  'Linguine au beurre de sauge et consommé de bœuf aux herbes ',type:'Pâtes, riz, céréales'},
+{  id: '19Wjn7H36BOUe0Z8agyg6NB04aRV67U08' , name:  'Linguine au pesto de pistaches et aux tomates séchées ',type:'Pâtes, riz, céréales'},
+{  id: '1LbymP0udVzYGMHMlmrHp7FMj3Ws78e2d' , name:  'Linguine aux coquillages, gambas et seiche',type:'Coquillages & crustacés'},
+{  id: '1Jm6pIv7ZVrjRCpg_HEspjgHBozPsH5jp' , name:  'Linguine aux palourdes ',type:'Pâtes, riz, céréales'},
+{  id: '11GRAjpSFhCWAsCpszEFs9dEiJXJWgCX0' , name:  'Lotte au curry et à la crème de coco ',type:'Poissons'},
+{  id: '1lbzSk14agsJ8FGhb922gLcEX5crMXLBU' , name:  'Madeleines aux épices ',type:'Déssert'},
+{  id: '15-uRfRy0e4HybfOJIhYFLqpy5LQGlQmU' , name:  'Magrets de canard, sauce aux airelles ',type:'Volailles'},
+{  id: '1stLDHSpsiP5CpPXQ2XXltr7-2n5f0qpR' , name:  'Maïs grillé, salsa tomate-piment sur lit d’orge perlé ',type:'Légumes'},
+{  id: '1IAPw5WeJ8JWDs95INPFS6TeBsLT4jlgw' , name:  'Makis de sarrasin aux rillettes de maquereau, crème de betterave au chèvre frais ',type:'Entrées'},
+{  id: '1QUa0bdEwC1zZ5RXvjvJbLLnQqCovO-fQ' , name:  'Man’ouché au zaatar ',type:'Pains'},
+{  id: '1jKymXg265fZHGpNh5igkxtPmuIQz-5FZ' , name:  'Marmite de morue ',type:'Poissons'},
+{  id: '1jKymXg265fZHGpNh5igkxtPmuIQz-5FZ' , name:  'Merlan rôti, crumble aux amandes et épinards à la crème ',type:'Poissons'},
+{  id: '1CEPgJeqIjSLENRvYKvSzFq3DMe8FRZW8' , name:  'Milkshake au lait ribot ',type:'Déssert'},
+{  id: '1dAQFyfzAI9wuQkxbuRCcYKkD4d33eMT-' , name:  'Minestrone aux légumes d’hiver ',type:'Soupes'},
+{  id: '1ACHGh0tFX8C9Bf0fHmoKMj2PKWDPeHP0' , name:  'Moelleux aux poires et miel de châtaignier ',type:'Déssert'},
+{  id: '1CEPgJeqIjSLENRvYKvSzFq3DMe8FRZW8' , name:  'Moelleux pistache aux cerises noires ',type:'Déssert'},
+{  id: '1ksbyoB1XSZx4bFSiRs63fvOcYuqDbCZ_' , name:  'Mogettes à la carotte et à la tomate ',type:'Plats végétariens'},
+{  id: '1nZcmNib_BHD7FtkMe_JEuMl4ZQBjFkH5' , name:  'Moghrabieh façon risotto aux champignons ',type:'Plats végétariens'},
+{  id: '1VHugVJCwqERHEl2DEBujxwr1DhthLHOQ' , name:  'Morteau grillée, purée au comté et champignons ',type:'Porc'},
+{  id: '14UqkO_eEtxG4vwqcmaCKV-JvGmkhC-sr' , name:  'Moules au cidre et frites de céleri ',type:'Coquillages & crustacés'},
+{  id: '14xECFBdrYvDFkVr1ph0lUfwTFhjb0FcF' , name:  'Moules coco-curry et riz gluant ',type:'Coquillages & crustacés'},
+{  id: '1iOsrV3fOuSGXqqp_qH9VjQsGQGRLrALi' , name:  'Moussaka aux lentilles ',type:'Légumes'},
+{  id: '1BqwWKUXCWH6utmocvMSQ20roLpbtHx2-' , name:  'Muffins anglais ',type:'Petits Déjeuners & Goûters'},
+{  id: '1VpZWGTFWdw_xU9GSP4ExZEC4P8sOULjQ' , name:  'Muffins banane-sarrasin ',type:'Déssert'},
+{  id: '1BqwWKUXCWH6utmocvMSQ20roLpbtHx2-' , name:  'Navettes briochées ',type:'Petits Déjeuners & Goûters'},
+{  id: '1S8-kPAK7QQU3XSlrLDtdSxGqMwru6VIj' , name:  'Noix de saint-Jacques rôties, écrasée de pommes de terre et jus flambé au cognac ',type:'Coquillages & crustacés'},
+{  id: '1ktOn5I7qcorzDXW-GKnuzGRMuaFJxT_o' , name:  'Nouilles au porc à la coréenne ',type:'Porc'},
+{  id: '1P3rUgLr54JowdaBtsgYD28EPPTvnfo8c' , name:  'Nouilles de riz au saumon, sauce coco au citron vert ',type:'Pâtes, riz, céréales'},
+{  id: '1Ei9p4PYaq6IUj13VAy5wgdkrt29kofVd' , name:  'Nouilles sautées aux champignons, oignons frais et œuf ',type:'Pâtes, riz, céréales'},
+{  id: '1KPNLEtEEhKuYC6Zf3H_uxGjtKZPugfCL' , name:  'Œuf Benedict à la truite fumée ',type:'Œufs'},
+{  id: '1g5NPD0g0zukIHKuw9CMlVjevZK4PZLQc' , name:  'Œufs aux pommes de terre, cheddar et bacon ',type:'Œufs'},
+{  id: '1ksbyoB1XSZx4bFSiRs63fvOcYuqDbCZ_' , name:  'Œufs cilbir au yaourt et asperges ',type:'Plats végétariens'},
+{  id: '1g5NPD0g0zukIHKuw9CMlVjevZK4PZLQc' , name:  'Œufs de caille, tuiles, mayonnaise à la truffe ',type:'Œufs'},
+{  id: '1QbDh6tdnPNoqbKIghSlF3RX7ehWxXeVp' , name:  'Œufs pochés façon dahl ',type:'Œufs'},
+{  id: '1N2D1tDuiHSAm7ZVrVwgmyUE2zhZ4FZ14' , name:  'Œufs pochés, pancakes aux épinards et sauce à la ricotta ',type:'Œufs'},
+{  id: '1ksbyoB1XSZx4bFSiRs63fvOcYuqDbCZ_' , name:  'Oignons rouges farcis, herbes et feta ',type:'Plats végétariens'},
+{  id: '13TK6WA8xdo568RkiCN4Bzilb_wtkUA-U' , name:  'Onglet grillé, betteraves et panais rôtis ',type:'Bœuf'},
+{  id: '1tYDarJDg9VYK0ECZolXV6i7vJJrL_nal' , name:  'Pain à la bière ',type:'Pains'},
+{  id: '1n_WF437Azv7BWrQpt0phtaF-QtSUxjxZ' , name:  'Pain aux flocons d’avoine et au miel ',type:'Petits Déjeuners & Goûters'},
+{  id: '1g5NPD0g0zukIHKuw9CMlVjevZK4PZLQc' , name:  'Pain perdu, œuf poché et cœur d’Arras coulant ',type:'Œufs'},
+{  id: '1QUa0bdEwC1zZ5RXvjvJbLLnQqCovO-fQ' , name:  'Pain polaire ',type:'Pains'},
+{  id: '1lRb0sPBpga-RSFR8tKcKYs-lDrcD2FuP' , name:  'Pan bagnat ',type:'Sandwichs'},
+{  id: '1R6BoOXYYofVl03NqN9Hw1iRLyuzEGYKT' , name:  'Pancakes à la patate douce, poireaux aux amandes fumées ',type:'Plats végétariens'},
+{  id: '1dbYL6Mr-u6lfJtgg-RrH6K1RlVBOeXGI' , name:  'Pancakes au merlu fumé et à la spiruline ',type:'Sandwichs'},
+{  id: '1mVExcm3pbObCiuhXmKk5L771ieNEnay3' , name:  'Parmentier de patates douces aux champignons, chou et tempeh ',type:'Plats végétariens'},
+{  id: '1Jm6pIv7ZVrjRCpg_HEspjgHBozPsH5jp' , name:  'Pastaresa aux asperges ',type:'Pâtes, riz, céréales'},
+{  id: '1QiNdbdhLVzO2klv_MXB6ufY5asS6l2A2' , name:  'Pasticcio de macaronis aux artichauts et aux petits pois ',type:'Pâtes, riz, céréales'},
+{  id: '1wQyvWrOdULg8SOyZTg97nBROxBAd5skC' , name:  'Pastilla de poulet aux légumes d’automne ',type:'Volailles'},
+{  id: '1Es0Vkq5d_UcZCF4BTsVrGTIEhI68duaS' , name:  'Pastissets ',type:'Déssert'},
+{  id: '1dABsiSvF6dAqdL6d0Omym5tJFe92bZVI' , name:  'Patates douces au sirop d’érable et à la mimolette ',type:'Légumes'},
+{  id: '1R6BoOXYYofVl03NqN9Hw1iRLyuzEGYKT' , name:  'Patates douces rôties aux noix de cajou et chèvre frais ',type:'Plats végétariens'},
+{  id: '1Ml0XEEEhwNeE7DH9nkKw-zkILhSaC0q9' , name:  'Pâtes à la purée d’ail, aux anchois et aux câpres ',type:'Pâtes, riz, céréales'},
+{  id: '1Jm6pIv7ZVrjRCpg_HEspjgHBozPsH5jp' , name:  'Pâtes au citron, thym et parmesan ',type:'Pâtes, riz, céréales'},
+{  id: '1Ml0XEEEhwNeE7DH9nkKw-zkILhSaC0q9' , name:  'Pâtes aux aubergines et à l’effilochée de poulet ',type:'Pâtes, riz, céréales'},
+{  id: '1S8-kPAK7QQU3XSlrLDtdSxGqMwru6VIj' , name:  'Pâtes aux gambas flambées au pastis ',type:'Coquillages & crustacés'},
+{  id: '1Ml0XEEEhwNeE7DH9nkKw-zkILhSaC0q9' , name:  'Pâtes aux sprats fumés, oignons caramélisés et citron ',type:'Pâtes, riz, céréales'},
+{  id: '11ovK1Dhb-YKGLOliDiKWSqQ8M3MFZZcM' , name:  'Paupiettes d’espadon, courgettes grillées ',type:'Poissons'},
+{  id: '1q3K-MH2B-TtNLCR7CaoTfv2qeRIiTEBl' , name:  'Paupiettes de dinde et jardinière de légumes ',type:'Volailles'},
+{  id: '1crsF5AJ8EMGXPhmOC-QxbIPLTodd7o2b' , name:  'Paupiettes de porc à la basquaise ',type:'Porc'},
+{  id: '1q3K-MH2B-TtNLCR7CaoTfv2qeRIiTEBl' , name:  'Paupiettes de poulet, courgettes au pavot ',type:'Volailles'},
+{  id: '1OSqLM8_FCHRH55b8srIJL_FQF6NX7IMd' , name:  'Paupiettes de veau aux pignons, parmesan et olives, asperges et jus au thym ',type:'Veau'},
+{  id: '1IIEWG5VgtJQ-B7YV0PA67cG16Nr44CUO' , name:  'Piadina au jambon de Parme ',type:'Tartes & cakes salés'},
+{  id: '13DsgV3XjeJV_aA9C4SEiFSSe1Po76Eyl' , name:  'Pissaladière aux oignons nouveaux, olives et câpres ',type:'Tartes & cakes salés'},
+{  id: '1H1eRdgXwyf7pu44SSm-yczRGEhXspBCd' , name:  'Pita comme une pizza, butternut et feta ',type:'Plats végétariens'},
+{  id: '13ZaTxpzuXCpT1LWxAuMsqCxDvXrzcYHV' , name:  'Pizza romaine ',type:'Tartes & cakes salés'},
+{  id: '1GgNsMoJwLfiqbt2-W327nxukgu7wz9SU' , name:  'Pizzettes à la purée d’aubergine et au chorizo ',type:'Tartes & cakes salés'},
+{  id: '1EC_VBX5j69YLMvKMSRQWGMg3QPMUEHUb' , name:  'Poêlée de chou vert aux raisins et aux lardons ',type:'Légumes'},
+{  id: '1dABsiSvF6dAqdL6d0Omym5tJFe92bZVI' , name:  'Poêlée de légumes aux noix de pécan ',type:'Légumes'},
+{  id: '1ACHGh0tFX8C9Bf0fHmoKMj2PKWDPeHP0' , name:  'Poire pochée à l’hibiscus, crème fouettée à la vanille ',type:'Déssert'},
+{  id: '1nPosKgtwgvrf3B8Q7huUrY_LKeofnboi' , name:  'Pois croquants ',type:'Entrées'},
+{  id: '1A4T-gHv5ioc_JIqdBUP0jq7Gdi1Oe4sU' , name:  'Poisson pané aux graines et au parmesan, purée de courge aux noix de cajou ',type:'Poissons'},
+{  id: '1uod8UqekTpZpM216l4Lw8wl5zC9dWOKz' , name:  'Polenta crémeuse à la truffe ',type:'Pâtes, riz, céréales'},
+{  id: '1EC_VBX5j69YLMvKMSRQWGMg3QPMUEHUb' , name:  'Pommes de terre rôties au jambon de Bigorre et à l’ail noir ',type:'Légumes'},
+{  id: '1vhREKljvXx_GPq3osm-bR_OzD5AavYLi' , name:  'Pommes duchesse aux patates douces et à l’orange ',type:'Légumes'},
+{  id: '1crsF5AJ8EMGXPhmOC-QxbIPLTodd7o2b' , name:  'Porc mariné, pommes de terre à l’ail ',type:'Porc'},
+{  id: '10AcFgJBqsk72nacUuLoEtFZaFfpU8j7p' , name:  'Porridge courge et choux de Bruxelles ',type:'Pâtes, riz, céréales'},
+{  id: '13TK6WA8xdo568RkiCN4Bzilb_wtkUA-U' , name:  'Pot-au-feu de joue de bœuf, os à moelle, foie gras et truffe ',type:'Bœuf'},
+{  id: '13TK6WA8xdo568RkiCN4Bzilb_wtkUA-U' , name:  'Pot-au-feu printanier ',type:'Bœuf'},
+{  id: '1orSvH5g5oIgsUX9jN0LD0F0IMDr7JV-A' , name:  'Potimarron farci à la viande, riz au bouillon de volaille ',type:'Veau'},
+{  id: '1LMM_pg2XdNfwQsa9PAiGP2H-DW_WvxoN' , name:  'Potimarron laqué au miso ',type:'Légumes'},
+{  id: '1q3K-MH2B-TtNLCR7CaoTfv2qeRIiTEBl' , name:  'Poularde aux morilles et au vin jaune ',type:'Volailles'},
+{  id: '18gNYSE0k4os1C8xS9v0ghuGoXY9ChdGL' , name:  'Poulet aux noix de cajou ',type:'Volailles'},
+{  id: '18gNYSE0k4os1C8xS9v0ghuGoXY9ChdGL' , name:  'Poulet mariné au lait ribot, à l’ail et au miel ',type:'Volailles'},
+{  id: '1vkIxi8_lgboahTgNqpLd4OzqmZgA7bEW' , name:  'Pulled pork au sirop d’érable, crème de rattes à l’ail confit ',type:'Porc'},
+{  id: '1LMM_pg2XdNfwQsa9PAiGP2H-DW_WvxoN' , name:  'Purée de butternut aux châtaignes ',type:'Légumes'},
+{  id: '1wQxgc7lnytxl9k4ivOv3iv8i5_eMnMdE' , name:  'Queue de bœuf et blettes poêlées ',type:'Bœuf'},
+{  id: '1V0Hz85WV67nVgQHGcj2AvJ4UPFX_A1YO' , name:  'Quiche aux asperges et à la feta ',type:'Tartes & cakes salés'},
+{  id: '13HqB0CZSxg_TWN0_sNMBvXGO4J3BtwSR' , name:  'Radis et pesto de fanes aux amandes ',type:'Entrées'},
+{  id: '12g6QdcpkWDZqvTCe2mkWlRfycwpyxFRJ' , name:  'Radis noir, œufs de poisson, crème et citron vert ',type:'Entrées'},
+{  id: '12g6QdcpkWDZqvTCe2mkWlRfycwpyxFRJ' , name:  'Radis roses aux cacahuètes ',type:'Entrées'},
+{  id: '1vkIxi8_lgboahTgNqpLd4OzqmZgA7bEW' , name:  'Ragoût d’échine de porc aux pommes de terre ',type:'Porc'},
+{  id: '10AcFgJBqsk72nacUuLoEtFZaFfpU8j7p' , name:  'Ravioles de foie gras à la crème de truffe ',type:'Pâtes, riz, céréales'},
+{  id: '10AcFgJBqsk72nacUuLoEtFZaFfpU8j7p' , name:  'Ravioles frites ',type:'Pâtes, riz, céréales'},
+{  id: '1loEvAo3rK5HLCSVPX4MbqCUblHluIOE7' , name:  'Raviolis aux herbes, sauce aux noix ',type:'Pâtes, riz, céréales'},
+{  id: '1ncOqebVhIQp-7WIFPP3ELcT9b0clF02m' , name:  'Raviolis aux herbes, sauce aux noix ',type:'Plats végétariens'},
+{  id: '1H4X_Vf9ar9gjXmbjTwX9cusadW7-1k_B' , name:  'Raviolis sardes aux pommes de terre, pecorino et menthe ',type:'Pâtes, riz, céréales'},
+{  id: '1EGxbmteP8KsbVFtwZwt9mUaFGpH6jzLE' , name:  'Ribs d’agneau au romarin et au poivre, légumes grillés ',type:'Agneau'},
+{  id: '1P3rUgLr54JowdaBtsgYD28EPPTvnfo8c' , name:  'Rigatonis au potimarron et fromage de brebis ',type:'Pâtes, riz, céréales'},
+{  id: '1uod8UqekTpZpM216l4Lw8wl5zC9dWOKz' , name:  'Rigatonis aux aubergines, poivrons, tomates et anchois ',type:'Pâtes, riz, céréales'},
+{  id: '12g6QdcpkWDZqvTCe2mkWlRfycwpyxFRJ' , name:  'Rillettes de maquereau au curry ',type:'Entrées'},
+{  id: '1hbFnXlM_cZC2wC702CLDNuihIpv-R1SJ' , name:  'Risotto aux calamars',type:'Pâtes, riz, céréales'},
+{  id: '1Ei9p4PYaq6IUj13VAy5wgdkrt29kofVd' , name:  'Risotto aux crevettes et au café ',type:'Pâtes, riz, céréales'},
+{  id: '1GBbNsb8rVNt0BrLByoQH6HCHpv10ObbY' , name:  'Risotto aux tourteaux et aux champignons ',type:'Pâtes, riz, céréales'},
+{  id: '1H1eRdgXwyf7pu44SSm-yczRGEhXspBCd' , name:  'Risotto de lentilles beluga au thé fumé',type:'Plats végétariens'},
+{  id: '1uod8UqekTpZpM216l4Lw8wl5zC9dWOKz' , name:  'Risotto de sarrasin au butternut ',type:'Pâtes, riz, céréales'},
+{  id: '1GsZ1RXAMjOmaGtAA24AFMUiWOWA-n0ad' , name:  'Riz au lait et au café ',type:'Déssert'},
+{  id: '1Ei9p4PYaq6IUj13VAy5wgdkrt29kofVd' , name:  'Riz frit au kimchi ',type:'Pâtes, riz, céréales'},
+{  id: '1pQytAIwX6q_Zw1CRmIJ4u85ibVCojV8r' , name:  'Riz sauté à l’ail, poisson et butternut ',type:'Pâtes, riz, céréales'},
+{  id: '1EvpMT_UV2_Mi-ibAICdDoaQ1wqxJ0ugD' , name:  'Rôti d’agneau à l’ail et aubergines à la chermoula ',type:'Agneau'},
+{  id: '11GRAjpSFhCWAsCpszEFs9dEiJXJWgCX0' , name:  'Rôti de cabillaud aux carottes et à la poitrine fumée',type:'Poissons'},
+{  id: '1vkIxi8_lgboahTgNqpLd4OzqmZgA7bEW' , name:  'Rôti de porc aux coings et au pain d’épice ',type:'Porc'},
+{  id: '192o9UxRT2hjRZQcTy1WzWRa5KDVe5gR1' , name:  'Rôti de veau à l’italienne ',type:'Veau'},
+{  id: '1K14lIk1Bvol0KDCq-ZY9FHyKxKo9_Y42' , name:  'Rôti de veau aux marrons et girolles, jus à la vanille ',type:'Veau'},
+{  id: '1K14lIk1Bvol0KDCq-ZY9FHyKxKo9_Y42' , name:  'Rôti de veau, polenta, sauce au bleu des Bauges ',type:'Veau'},
+{  id: '14GqccYJcIXpsBu4BDJnF0KaD-Z3srQeA' , name:  'Rouleaux aux dattes ',type:'Déssert'},
+{  id: '12g6QdcpkWDZqvTCe2mkWlRfycwpyxFRJ' , name:  'Rouleaux d’automne au jambon blanc ',type:'Entrées'},
+{  id: '1hU6eaTGfAdEqOhSvgvztc8qcetCZAQTC' , name:  'Rouleaux de printemps au poulet et aux carottes râpées ',type:'Entrées'},
+{  id: '1Es0Vkq5d_UcZCF4BTsVrGTIEhI68duaS' , name:  'Sablés au cacao fourrés au chocolat ',type:'Déssert'},
+{  id: '1lbzSk14agsJ8FGhb922gLcEX5crMXLBU' , name:  'Sablés au chocolat et à la fleur de sel ',type:'Déssert'},
+{  id: '1hkCZGd9I5pB0gxQwvqBK8VpyqOuU5J64' , name:  'Sablés au comté et au carvi, thon fumé et fromage frais ',type:'Entrées'},
+{  id: '14xECFBdrYvDFkVr1ph0lUfwTFhjb0FcF' , name:  'Saint-jacques lardées, chou aux marrons ',type:'Coquillages & crustacés'},
+{  id: '14UqkO_eEtxG4vwqcmaCKV-JvGmkhC-sr' , name:  'Saint-jacques mi-cuites, chou-fleur au curcuma ',type:'Coquillages & crustacés'},
+{  id: '14xECFBdrYvDFkVr1ph0lUfwTFhjb0FcF' , name:  'Saint-jacques snackées, chou-fleur rôti ',type:'Coquillages & crustacés'},
+{  id: '1CZVLkLiAMd3a5xIK05NtqM_7NTb2S2xC' , name:  'Salade Caesar et langoustes grillées au beurre citron-parmesan ',type:'Salades'},
+{  id: '1I0nOki806T8n5PVxcIJ8FlsXlWWUtSOq' , name:  'Salade d’épinard, betterave, pomme, poulet au pavot ',type:'Salades'},
+{  id: '1PUiM2yEbzucVDzoSSqJd1gibtSEiKb--' , name:  'Salade d’orzo et poireaux rôtis, sauce aux dattes et dukkha',type:'Plats végétariens'},
+{  id: '1ARFcym-Yh7p9-171zUWeh5kwOlasG2Iv' , name:  'Salade de bœuf à la menthe et à la citronnelle ',type:'Salades'},
+{  id: '1QbDh6tdnPNoqbKIghSlF3RX7ehWxXeVp' , name:  'Salade de carottes tièdes et œufs durs marbrés au café ',type:'Œufs'},
+{  id: '1nLIkMjidzZft3Dw0VMxF2V-oX26-Gag7' , name:  'Salade de concombre aux pois chiches et rôti d’agneau ',type:'Salades'},
+{  id: '1yz0IWjVLQGp9N_WuxqdlAog5uXF-cZ5B' , name:  'Salade de crabe et légumes croquants à la harissa ',type:'Salades'},
+{  id: '1y0HeD72QG696PZDm795dhtRHZ0yTo9ov' , name:  'Salade de fenouil au citron vert et aux crevettes sautées ',type:'Salades'},
+{  id: '1nLIkMjidzZft3Dw0VMxF2V-oX26-Gag7' , name:  'Salade de frisée au lard, parmesan et œuf poché ',type:'Salades'},
+{  id: '1FijF6PN_sfVNm5vbQsrFs_854aAFZ2k2' , name:  'Salade de haricots-maïs du Béarn à la morue, piquillos et ail confit ',type:'Salades'},
+{  id: '1SpIGjB6-YQtsXLyGOBiK89fUXws7zRPM' , name:  'Salade de lentilles tièdes aux pommes, noix et magret séché ',type:'Salades'},
+{  id: '1SpIGjB6-YQtsXLyGOBiK89fUXws7zRPM' , name:  'Salade de lingots du Nord aux harengs, chou et pomme ',type:'Salades'},
+{  id: '1SpIGjB6-YQtsXLyGOBiK89fUXws7zRPM' , name:  'Salade de mâche au haddock ',type:'Salades'},
+{  id: '1nMjG889_zr_5vNbg3zCxToAdF0jcNOJQ' , name:  'Salade de mâche,betteraves et truite fumée ',type:'Salades'},
+{  id: '1nMjG889_zr_5vNbg3zCxToAdF0jcNOJQ' , name:  'Salade de pâtes aux figues, melon, jambon et scamorza ',type:'Salades'},
+{  id: '1H1eRdgXwyf7pu44SSm-yczRGEhXspBCd' , name:  'Salade de pâtes vertes au brocoli, pesto de pousses d’épinard ',type:'Plats végétariens'},
+{  id: '1GwkEx5tY8TXTg0jpzHdKLX6HYo8rfPIq' , name:  'Salade de pommes de terre aux harengs et à la menthe',type:'Salades'},
+{  id: '1I0nOki806T8n5PVxcIJ8FlsXlWWUtSOq' , name:  'Salade de poule au myrte ',type:'Salades'},
+{  id: '1PUiM2yEbzucVDzoSSqJd1gibtSEiKb--' , name:  'Salade de pousses d’épinard et billes de chèvre au café ',type:'Plats végétariens'},
+{  id: '1I0nOki806T8n5PVxcIJ8FlsXlWWUtSOq' , name:  'Salade de riz noir au saumon fumé minute ',type:'Salades'},
+{  id: '1ARFcym-Yh7p9-171zUWeh5kwOlasG2Iv' , name:  'Salade de riz, concombre et effilochée de porc ',type:'Salades'},
+{  id: '1ARFcym-Yh7p9-171zUWeh5kwOlasG2Iv' , name:  'Salade de sorgho aux asperges grillées ',type:'Salades'},
+{  id: '1yz0IWjVLQGp9N_WuxqdlAog5uXF-cZ5B' , name:  'Salade de sucrine et d’asperges aux œufs mollets ',type:'Salades'},
+{  id: '1yz0IWjVLQGp9N_WuxqdlAog5uXF-cZ5B' , name:  'Salade de tomates, figues de barbarie, crevettes et feta',type:'Salades'},
+{  id: '1nLIkMjidzZft3Dw0VMxF2V-oX26-Gag7' , name:  'Salade de tomates, granola salé et œufs marinés ',type:'Salades'},
+{  id: '1GwkEx5tY8TXTg0jpzHdKLX6HYo8rfPIq' , name:  'Salade panzanella à la mozzarella et aux olives taggiasche ',type:'Salades'},
+{  id: '1nMjG889_zr_5vNbg3zCxToAdF0jcNOJQ' , name:  'Salade quinoa, lentilles aux poivrons ',type:'Salades'},
+{  id: '1lRb0sPBpga-RSFR8tKcKYs-lDrcD2FuP' , name:  'Sandwich à l’aïoli ',type:'Sandwichs'},
+{  id: '1dbYL6Mr-u6lfJtgg-RrH6K1RlVBOeXGI' , name:  'Sandwich grillé gorgonzola-pistache-épinard',type:'Sandwichs'},
+{  id: '1lbzSk14agsJ8FGhb922gLcEX5crMXLBU' , name:  'Sauce au café et au chocolat blanc ',type:'Déssert'},
+{  id: '1orSvH5g5oIgsUX9jN0LD0F0IMDr7JV-A' , name:  'Sauce au citron ',type:'Veau'},
+{  id: '13HqB0CZSxg_TWN0_sNMBvXGO4J3BtwSR' , name:  'Sauce onctueuse à l’amande ',type:'Entrées'},
+{  id: '1JpsXemT1sBqZnrxyakdwYSvU7AdgKpa4' , name:  'Saumon en croûte de sel, sauce béarnaise',type:'Poissons'},
+{  id: '1dbYL6Mr-u6lfJtgg-RrH6K1RlVBOeXGI' , name:  'saumon fumé, yaourt à l’aneth ',type:'Sandwichs'},
+{  id: '1E5J-z3x_ow_1dVWRvgOtXBJTIzGeslQ4' , name:  'Saumon laqué à la betterave ',type:'Poissons'},
+{  id: '11GRAjpSFhCWAsCpszEFs9dEiJXJWgCX0' , name:  'Saumon mariné au soja et aux épines de sapin ',type:'Poissons'},
+{  id: '1K8YC8gdjec8aEQ8Ho3DkBXbGVlnL9JYW' , name:  'Sbriciolata aux fraises et à la ricotta ',type:'Déssert'},
+{  id: '1G1TH4Zgc-RNjDPiFPt16rKUq2iOCDp69' , name:  'Scones salés aux graines, œufs au plat et lard grillé ',type:'Petits Déjeuners & Goûters'},
+{  id: '1EGxbmteP8KsbVFtwZwt9mUaFGpH6jzLE' , name:  'Selle d’agneau farcie à la marocaine ',type:'Agneau'},
+{  id: '1n_WF437Azv7BWrQpt0phtaF-QtSUxjxZ' , name:  'Smoothie fraise-pastèque ',type:'Petits Déjeuners & Goûters'},
+{  id: '1PYyk5_c8Fbjhvuy6EGct2iQVEfpYd6f5' , name:  'Smoothie prune, banane et fleur d’oranger ',type:'Petits Déjeuners & Goûters'},
+{  id: '1HeZ1g2XRShJPV4WIWNd1_C1H68Pn96EB' , name:  'Soto ayam ',type:'Soupes'},
+{  id: '1dAQFyfzAI9wuQkxbuRCcYKkD4d33eMT-' , name:  'Soupe au chou et saucisses de Morteau ',type:'Soupes'},
+{  id: '1BgEcSSWAFZkD4tk968LxkbmJ_Fdcc5MA' , name:  'Soupe de châtaignes et de champignons au chorizo grillé ',type:'Soupes'},
+{  id: '1ujfNxs3TfD7wqh4E935LtrPyG7epFdM0' , name:  'Soupe façon pistou ',type:'Soupes'},
+{  id: '1eiFPzlsNhALDwQZKH4AQ37IjYFACujff' , name:  'Soupe froide courgette-avocat à la menthe ',type:'Soupes'},
+{  id: '1EGxbmteP8KsbVFtwZwt9mUaFGpH6jzLE' , name:  'Souris d’agneau aux épices et à la harissa, boulgour aux herbes ',type:'Agneau'},
+{  id: '1HXC9zaYBYiyFYtD1ECmle27G9Yg0ZRad' , name:  'Souris d’agneau confites aux flageolets ',type:'Agneau'},
+{  id: '1ZbsE6zcviu7b6tvYLDMtnyD_vHW5rMhM' , name:  'Souris d’agneau et fenouil rôti aux amandes, jus au romarin ',type:'Agneau'},
+{  id: '19Ik9q9IDoYsxmCiiGM4nrswHcfggFF1Z' , name:  'Souris d’agneau laquée au miel, purée de carottes ',type:'Agneau'},
+{  id: '1P3rUgLr54JowdaBtsgYD28EPPTvnfo8c' , name:  'Spaghettis aux artichauts poêlés ',type:'Pâtes, riz, céréales'},
+{  id: '1QBx1UP1lzL_ZzvfUTy2325RjRU9Wc6lo' , name:  'Steak de thon blanc grillé, sauce aux olives ',type:'Poissons'},
+{  id: '1zD7zUfKPDvr6GN925tq-V48qKEV_XZ32' , name:  'Suprême de pintade au jambon fumé et au bleu, champignons rôtis ',type:'Volailles'},
+{  id: '18gNYSE0k4os1C8xS9v0ghuGoXY9ChdGL' , name:  'Suprêmes de pintade, sauce au champagne et légumes au safran ',type:'Volailles'},
+{  id: '1LMM_pg2XdNfwQsa9PAiGP2H-DW_WvxoN' , name:  'Taboulé de choux et d’asperges vertes ',type:'Légumes'},
+{  id: '19Ik9q9IDoYsxmCiiGM4nrswHcfggFF1Z' , name:  'Tajine d’agneau aux légumes, poires et cranberries ',type:'Agneau'},
+{  id: '1PUiM2yEbzucVDzoSSqJd1gibtSEiKb--' , name:  'Tajine de légumes au safran',type:'Plats végétariens'},
+{  id: '1hNlD9Zv0eIoScvWwn_jYwBrBb__9QpWS' , name:  'Tajine de poulet à la courge butternut et aux fruits secs ',type:'Volailles'},
+{  id: '1hNlD9Zv0eIoScvWwn_jYwBrBb__9QpWS' , name:  'Tajine de poulet aux deux raisins ',type:'Volailles'},
+{  id: '19Ik9q9IDoYsxmCiiGM4nrswHcfggFF1Z' , name:  'Tajine de souris d’agneau aux abricots moelleux ',type:'Agneau'},
+{  id: '1KB9RPZ8l5hLOus43hkw2EtPz2V9RjP6F' , name:  'Tarama blanc à la truffe et gressins maison ',type:'Entrées'},
+{  id: '1KknPKryTC9ErFsUlLGFPWgKzCWB_zNHK' , name:  'Tarte à la chicorée et au roquefort ',type:'Tartes & cakes salés'},
+{  id: '1p1Pkw-suNLmpnNNB0UjW_8Hk1XCM3wkO' , name:  'Tarte aux épinards, tomates confites et bonite, salade de fenouil ',type:'Tartes & cakes salés'},
+{  id: '14GqccYJcIXpsBu4BDJnF0KaD-Z3srQeA' , name:  'Tarte aux noix et au caramel ',type:'Déssert'},
+{  id: '1GgNsMoJwLfiqbt2-W327nxukgu7wz9SU' , name:  'Tarte aux poireaux, lardons et cantal ',type:'Tartes & cakes salés'},
+{  id: '1YoHvnLPsV82d1-8G6VRMQqsIZeVoPKbR' , name:  'Tarte croustillante à la chantilly, fruits secs et sirop à l’orange ',type:'Déssert'},
+{  id: '1Oz96mRqch6A56Zo--ZVMrT8HguN-p5KF' , name:  'Tarte pannacotta aux fruits exotiques ',type:'Déssert'},
+{  id: '1NiYllrxGr0C2sInLzWAhfmsNx7s-nT3Y' , name:  'Tarte rustique aux oignons verts ',type:'Tartes & cakes salés'},
+{  id: '1GsZ1RXAMjOmaGtAA24AFMUiWOWA-n0ad' , name:  'Tarte rustique aux pommes et confiture de framboises ',type:'Déssert'},
+{  id: '1IIEWG5VgtJQ-B7YV0PA67cG16Nr44CUO' , name:  'Tarte rustique aux tomates cerise ',type:'Tartes & cakes salés'},
+{  id: '13DsgV3XjeJV_aA9C4SEiFSSe1Po76Eyl' , name:  'Tarte Tatin aux blettes et aux noisettes ',type:'Tartes & cakes salés'},
+{  id: '1KknPKryTC9ErFsUlLGFPWgKzCWB_zNHK' , name:  'Tartelettes à la courge butternut et au pesto de noix ',type:'Tartes & cakes salés'},
+{  id: '13HqB0CZSxg_TWN0_sNMBvXGO4J3BtwSR' , name:  'Tartelettes au boudin blanc, chutney de mangue ',type:'Entrées'},
+{  id: '1hkCZGd9I5pB0gxQwvqBK8VpyqOuU5J64' , name:  'Tartinade de chou-fleur au sésame, pitas rôties au zaatar ',type:'Entrées'},
+{  id: '1QbDh6tdnPNoqbKIghSlF3RX7ehWxXeVp' , name:  'Tartines d’avocat, œufs mollets et saumon fumé',type:'Œufs'},
+{  id: '1Kv3Dk8DxqKnaD0wn1CoiZ5oFJO9AMqnd' , name:  'Tataki de thon aux champignons ',type:'Poissons'},
+{  id: '1NiYllrxGr0C2sInLzWAhfmsNx7s-nT3Y' , name:  'Tatin d’oignons doux au café ',type:'Tartes & cakes salés'},
+{  id: '1vhREKljvXx_GPq3osm-bR_OzD5AavYLi' , name:  'Tempura de légumes d’hiver ',type:'Légumes'},
+{  id: '1Kv3Dk8DxqKnaD0wn1CoiZ5oFJO9AMqnd' , name:  'Thon aux poivrons aigres-doux ',type:'Poissons'},
+{  id: '1EClv9nnoyufidcr-scPCiJ4-zEaPkvIr' , name:  'Tiramisu semi-glacé ',type:'Déssert'},
+{  id: '1wQxgc7lnytxl9k4ivOv3iv8i5_eMnMdE' , name:  'Tomates farcies au bœuf ',type:'Bœuf'},
+{  id: '1K8YC8gdjec8aEQ8Ho3DkBXbGVlnL9JYW' , name:  'Torta nera ',type:'Déssert'},
+{  id: '1wQxgc7lnytxl9k4ivOv3iv8i5_eMnMdE' , name:  'Tournedos, sauce au sirop d’érable et aux cranberries ',type:'Bœuf'},
+{  id: '1yQiw2VGL27hu0Kbg4ZW4O3frIbrC-kHP' , name:  'Tourte aux petits pois, aux pousses d’épinard et à la brousse ',type:'Tartes & cakes salés'},
+{  id: '1hNlD9Zv0eIoScvWwn_jYwBrBb__9QpWS' , name:  'Tourte de dinde et courge à la bière ',type:'Volailles'},
+{  id: '1CtJPz-XwnNo2CSSCEIaqgY_a5A_JFaVV' , name:  'Tourte feuilletée au faisan, foie gras et aux champignons ',type:'Tartes & cakes salés'},
+{  id: '1gZoaoYjOxqfLIAPicWYTkOdsaGNJ2JV1' , name:  'Trifle aux fraises',type:'Déssert'},
+{  id: '1nbidDKYSI1VVf9HBokuYKEzV6NfZsNyU' , name:  'Trifles aux fruits exotiques, mousse coco et biscuit aux épices ',type:'Déssert'},
+{  id: '1IIEWG5VgtJQ-B7YV0PA67cG16Nr44CUO' , name:  'Trouchia ',type:'Tartes & cakes salés'},
+{  id: '1VpZWGTFWdw_xU9GSP4ExZEC4P8sOULjQ' , name:  'Truffes au chocolat blanc et coco râpée ',type:'Déssert'},
+{  id: '13HqB0CZSxg_TWN0_sNMBvXGO4J3BtwSR' , name:  'Truite fumée, betterave, crème crue et huile infusée à l’estragon ',type:'Entrées'},
+{  id: '1Kv3Dk8DxqKnaD0wn1CoiZ5oFJO9AMqnd' , name:  'Truite marinée et polenta',type:'Poissons'},
+{  id: '1eiFPzlsNhALDwQZKH4AQ37IjYFACujff' , name:  'Velouté au fromage d’Ossau ',type:'Soupes'},
+{  id: '1eiFPzlsNhALDwQZKH4AQ37IjYFACujff' , name:  'Velouté carotte-coco-gingembre et persil frit ',type:'Soupes'},
+{  id: '1U4AYr-iWK--4BneJcr_F1O3FYeo_JSKO' , name:  'Velouté carotte-poireau au curcuma ',type:'Soupes'},
+{  id: '1dAQFyfzAI9wuQkxbuRCcYKkD4d33eMT-' , name:  'Velouté cèpe-châtaigne et lard croustillant ',type:'Soupes'},
+{  id: '1YPb7JPZ4b5eLm7LdOBGhU1xgQf-4OsGZ' , name:  'Velouté de betterave, poire, céleri-rave et cottage cheese ',type:'Soupes'},
+{  id: '1U4AYr-iWK--4BneJcr_F1O3FYeo_JSKO' , name:  'Velouté de cocos de Paimpol à l’andouille ',type:'Soupes'},
+{  id: '1YPb7JPZ4b5eLm7LdOBGhU1xgQf-4OsGZ' , name:  'Velouté de cresson aux lardons, œuf mollet et croûtons ',type:'Soupes'},
+{  id: '1YPb7JPZ4b5eLm7LdOBGhU1xgQf-4OsGZ' , name:  'Velouté de panais au camembert et aux noisettes ',type:'Soupes'},
+{  id: '1yegqcP-UaSF03YGeP0TuQHiaA8aEOqQP' , name:  'Velouté de petits pois et cresson, lardons croustillants ',type:'Soupes'},
+{  id: '1yegqcP-UaSF03YGeP0TuQHiaA8aEOqQP' , name:  'Velouté de poireaux au miso blanc ',type:'Soupes'},
+
+
+
+            // Ajoutez plus d'éléments ici comme dans la liste initiale
+        ];
+
+        const fileInput = document.getElementById("fileInput");
+        const fileList = document.getElementById("fileList");
+        const typePlat = document.getElementById("typePlat");
+
+        // Fonction pour afficher la liste des fichiers en fonction du type de plat
+        typePlat.addEventListener("change", function () {
+            const selectedType = typePlat.value;
+            const query = fileInput.value.toLowerCase();
+            displayFiles(selectedType, query);
+        });
+
+        // Fonction pour afficher la liste filtrée par recherche textuelle
+        fileInput.addEventListener("input", function () {
+            const query = this.value.toLowerCase();
+            const selectedType = typePlat.value;
+            displayFiles(selectedType, query);
+        });
+
+        // Fonction pour afficher les fichiers filtrés par type et recherche
+        function displayFiles(type, query) {
+            // Filtrer les fichiers selon le type et la recherche
+            const filteredFiles = files.filter(file => {
+                const matchType = type === 'all' || file.type === type;
+                const matchName = file.name.toLowerCase().includes(query);
+                return matchType && matchName;
+            });
+
+            // Vider l'affichage précédent
+            fileList.innerHTML = "";
+
+            // Afficher les fichiers filtrés
+            if (filteredFiles.length > 0) {
+                filteredFiles.forEach(file => {
+                    const li = document.createElement("li");
+                    li.textContent = file.name;
+                    li.addEventListener("click", function () {
+                        window.open(`https://drive.google.com/open?id=${file.id}`, "_blank");
+                    });
+                    fileList.appendChild(li);
+                });
+            } else {
+                fileList.innerHTML = "<li>Aucun fichier trouvé</li>";
+            }
+        }
+
+        // Affichage initial (tous les fichiers)
+        displayFiles('all', '');
+    </script>
+</body>
+</html>
